@@ -108,8 +108,6 @@ _HADOOP_DEPS_PACKAGE = 'pypaimon.hadoop-deps'
 def _get_hadoop_classpath(env):
     if constants.PYPAIMON_HADOOP_CLASSPATH in env:
         return env[constants.PYPAIMON_HADOOP_CLASSPATH]
-    elif 'HADOOP_CLASSPATH' in env:
-        return env['HADOOP_CLASSPATH']
     else:
         # use built-in hadoop
         jars = importlib.resources.files(_HADOOP_DEPS_PACKAGE)

@@ -15,10 +15,13 @@
 #  See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
-
+import os
+import subprocess
 from typing import Optional, List
+from urllib.parse import urlparse, splitport
 
 import pyarrow.dataset as ds
+from pyarrow import fs
 
 from pypaimon import Predicate
 from pypaimon.pynative.common.row.internal_row import InternalRow
@@ -44,8 +47,17 @@ class PyArrowDatasetReader(FileRecordReader[InternalRow]):
         if predicate is not None:
             predicate = convert_predicate(predicate)
 
-        self._file_path = file_path
-        self.dataset = ds.dataset(file_path, format=format)
+        scheme, netloc, path = self.parse_location(str(file_path))
+        if scheme in {"hdfs", "viewfs"}:
+            self._file_path = path
+            self._filesystem = self._initialize_hdfs_fs(scheme, netloc)
+        elif scheme in {"file"}:
+            self._file_path = path
+            self._filesystem = fs.LocalFileSystem()
+        else:
+            raise ValueError(f"Unrecognized filesystem type in URI: {scheme}")
+
+        self.dataset = ds.dataset(self._file_path, format=format, filesystem=self._filesystem)
         self.scanner = self.dataset.scanner(
             columns=fields,
             filter=predicate,
@@ -69,3 +81,39 @@ class PyArrowDatasetReader(FileRecordReader[InternalRow]):
 
     def close(self):
         pass
+
+    def _initialize_hdfs_fs(self, scheme, netloc):
+        if 'HADOOP_HOME' not in os.environ:
+            raise RuntimeError("HADOOP_HOME environment variable is not set.")
+
+        if 'HADOOP_CONF_DIR' not in os.environ:
+            raise RuntimeError("HADOOP_CONF_DIR environment variable is not set.")
+
+        hadoop_home = os.environ.get("HADOOP_HOME")
+        native_lib_path = f"{hadoop_home}/lib/native"
+        os.environ['LD_LIBRARY_PATH'] = f"{native_lib_path}:{os.environ.get('LD_LIBRARY_PATH', '')}"
+
+        class_paths = subprocess.run(
+            [f'{hadoop_home}/bin/hadoop', 'classpath', '--glob'],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        os.environ['CLASSPATH'] = class_paths.stdout.strip()
+
+        host, port_str = splitport(netloc)
+        return fs.HadoopFileSystem(
+            host=host,
+            port=int(port_str),
+            user=os.environ.get('HADOOP_USER_NAME', 'hadoop')
+        )
+
+    @staticmethod
+    def parse_location(location: str):
+        uri = urlparse(location)
+        if not uri.scheme:
+            return "file", uri.netloc, os.path.abspath(location)
+        elif uri.scheme in ("hdfs", "viewfs"):
+            return uri.scheme, uri.netloc, uri.path
+        else:
+            return uri.scheme, uri.netloc, f"{uri.netloc}{uri.path}"
