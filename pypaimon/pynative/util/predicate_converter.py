@@ -23,55 +23,54 @@ import pyarrow.compute as pc
 import pyarrow.dataset as ds
 from pyarrow.dataset import Expression
 
-from pypaimon import Predicate
+from pypaimon.api import Predicate
+from pypaimon.pynative.common.predicate import PredicateImpl
 
 
 def convert_predicate(predicate: Predicate) -> Expression | bool:
     """
     # Convert Paimon's Predicate to PyArrow Dataset's filter
     """
-    if not hasattr(predicate, 'py_predicate'):
-        raise ValueError("Predicate must have py_predicate attribute")
+    if not isinstance(predicate, PredicateImpl):
+        raise RuntimeError("Type of predicate should be PredicateImpl")
 
-    py_predicate = predicate.py_predicate
-
-    if py_predicate.method == 'equal':
-        return ds.field(py_predicate.field) == py_predicate.literals[0]
-    elif py_predicate.method == 'notEqual':
-        return ds.field(py_predicate.field) != py_predicate.literals[0]
-    elif py_predicate.method == 'lessThan':
-        return ds.field(py_predicate.field) < py_predicate.literals[0]
-    elif py_predicate.method == 'lessOrEqual':
-        return ds.field(py_predicate.field) <= py_predicate.literals[0]
-    elif py_predicate.method == 'greaterThan':
-        return ds.field(py_predicate.field) > py_predicate.literals[0]
-    elif py_predicate.method == 'greaterOrEqual':
-        return ds.field(py_predicate.field) >= py_predicate.literals[0]
-    elif py_predicate.method == 'isNull':
-        return ds.field(py_predicate.field).is_null()
-    elif py_predicate.method == 'isNotNull':
-        return ds.field(py_predicate.field).is_valid()
-    elif py_predicate.method == 'in':
-        return ds.field(py_predicate.field).isin(py_predicate.literals)
-    elif py_predicate.method == 'notIn':
-        return ~ds.field(py_predicate.field).isin(py_predicate.literals)
-    elif py_predicate.method == 'startsWith':
-        pattern = py_predicate.literals[0]
-        return pc.starts_with(ds.field(py_predicate.field).cast(pa.string()), pattern)
-    elif py_predicate.method == 'endsWith':
-        pattern = py_predicate.literals[0]
-        return pc.ends_with(ds.field(py_predicate.field).cast(pa.string()), pattern)
-    elif py_predicate.method == 'contains':
-        pattern = py_predicate.literals[0]
-        return pc.match_substring(ds.field(py_predicate.field).cast(pa.string()), pattern)
-    elif py_predicate.method == 'between':
-        return (ds.field(py_predicate.field) >= py_predicate.literals[0]) & \
-            (ds.field(py_predicate.field) <= py_predicate.literals[1])
-    elif py_predicate.method == 'and':
+    if predicate.method == 'equal':
+        return ds.field(predicate.field) == predicate.literals[0]
+    elif predicate.method == 'notEqual':
+        return ds.field(predicate.field) != predicate.literals[0]
+    elif predicate.method == 'lessThan':
+        return ds.field(predicate.field) < predicate.literals[0]
+    elif predicate.method == 'lessOrEqual':
+        return ds.field(predicate.field) <= predicate.literals[0]
+    elif predicate.method == 'greaterThan':
+        return ds.field(predicate.field) > predicate.literals[0]
+    elif predicate.method == 'greaterOrEqual':
+        return ds.field(predicate.field) >= predicate.literals[0]
+    elif predicate.method == 'isNull':
+        return ds.field(predicate.field).is_null()
+    elif predicate.method == 'isNotNull':
+        return ds.field(predicate.field).is_valid()
+    elif predicate.method == 'in':
+        return ds.field(predicate.field).isin(predicate.literals)
+    elif predicate.method == 'notIn':
+        return ~ds.field(predicate.field).isin(predicate.literals)
+    elif predicate.method == 'startsWith':
+        pattern = predicate.literals[0]
+        return pc.starts_with(ds.field(predicate.field).cast(pa.string()), pattern)
+    elif predicate.method == 'endsWith':
+        pattern = predicate.literals[0]
+        return pc.ends_with(ds.field(predicate.field).cast(pa.string()), pattern)
+    elif predicate.method == 'contains':
+        pattern = predicate.literals[0]
+        return pc.match_substring(ds.field(predicate.field).cast(pa.string()), pattern)
+    elif predicate.method == 'between':
+        return (ds.field(predicate.field) >= predicate.literals[0]) & \
+            (ds.field(predicate.field) <= predicate.literals[1])
+    elif predicate.method == 'and':
         return reduce(lambda x, y: x & y,
-                      [convert_predicate(p) for p in py_predicate.literals])
-    elif py_predicate.method == 'or':
+                      [convert_predicate(p) for p in predicate.literals])
+    elif predicate.method == 'or':
         return reduce(lambda x, y: x | y,
-                      [convert_predicate(p) for p in py_predicate.literals])
+                      [convert_predicate(p) for p in predicate.literals])
     else:
-        raise ValueError(f"Unsupported predicate method: {py_predicate.method}")
+        raise ValueError(f"Unsupported predicate method: {predicate.method}")

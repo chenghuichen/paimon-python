@@ -28,11 +28,11 @@ class BatchTableWrite(ABC):
     """A table write for batch processing. Recommended for one-time committing."""
 
     @abstractmethod
-    def write_arrow(self, table: pa.Table):
+    def write_arrow(self, table: pa.Table, row_kind: List[int] = None):
         """ Write an arrow table to the writer."""
 
     @abstractmethod
-    def write_arrow_batch(self, record_batch: pa.RecordBatch):
+    def write_arrow_batch(self, record_batch: pa.RecordBatch, row_kind: List[int] = None):
         """ Write an arrow record batch to the writer."""
 
     @abstractmethod

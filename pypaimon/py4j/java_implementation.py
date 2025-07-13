@@ -32,8 +32,8 @@ from pypaimon.api import \
 from typing import List, Iterator, Optional, Any, TYPE_CHECKING
 
 from pypaimon.pynative.common.exception import PyNativeNotImplementedError
-from pypaimon.pynative.common.predicate import PyNativePredicate
-from pypaimon.pynative.common.row.internal_row import InternalRow
+from pypaimon.pynative.common.predicate import PredicateImpl
+from pypaimon.pynative.row import InternalRow
 from pypaimon.pynative.util.reader_converter import ReaderConverter
 
 if TYPE_CHECKING:
@@ -42,6 +42,10 @@ if TYPE_CHECKING:
 
 
 class Catalog(catalog.Catalog):
+
+    @staticmethod
+    def identifier() -> str:
+        pass  # TODO
 
     def __init__(self, j_catalog, catalog_options: dict):
         self._j_catalog = j_catalog
@@ -101,7 +105,7 @@ class ReadBuilder(read_builder.ReadBuilder):
         self._predicate = None
         self._projection = None
 
-    def with_filter(self, predicate: 'Predicate'):
+    def with_filter(self, predicate: 'PredicateImpl'):
         self._predicate = predicate
         self._j_read_builder.withFilter(predicate.to_j_predicate())
         return self
@@ -403,7 +407,7 @@ class BatchTableCommit(table_commit.BatchTableCommit):
 
 class Predicate(predicate.Predicate):
 
-    def __init__(self, py_predicate: PyNativePredicate, j_predicate_bytes):
+    def __init__(self, py_predicate: PredicateImpl, j_predicate_bytes):
         self.py_predicate = py_predicate
         self._j_predicate_bytes = j_predicate_bytes
 
@@ -440,8 +444,8 @@ class PredicateBuilder(predicate.PredicateBuilder):
             index,
             literals
         )
-        return Predicate(PyNativePredicate(method, index, field, literals),
-                         serialize_java_object(j_predicate))
+        return PredicateImpl(PredicateImpl(method, index, field, literals),
+                             serialize_java_object(j_predicate))
 
     def equal(self, field: str, literal: Any) -> Predicate:
         return self._build('equal', field, [literal])
@@ -489,11 +493,11 @@ class PredicateBuilder(predicate.PredicateBuilder):
     def and_predicates(self, predicates: List[Predicate]) -> Predicate:
         j_predicates = list(map(lambda p: p.to_j_predicate(), predicates))
         j_predicate = get_gateway().jvm.PredicationUtil.buildAnd(j_predicates)
-        return Predicate(PyNativePredicate('and', None, None, predicates),
-                         serialize_java_object(j_predicate))
+        return PredicateImpl(PredicateImpl('and', None, None, predicates),
+                             serialize_java_object(j_predicate))
 
     def or_predicates(self, predicates: List[Predicate]) -> Predicate:
         j_predicates = list(map(lambda p: p.to_j_predicate(), predicates))
         j_predicate = get_gateway().jvm.PredicationUtil.buildOr(j_predicates)
-        return Predicate(PyNativePredicate('or', None, None, predicates),
-                         serialize_java_object(j_predicate))
+        return PredicateImpl(PredicateImpl('or', None, None, predicates),
+                             serialize_java_object(j_predicate))
