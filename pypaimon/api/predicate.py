@@ -25,10 +25,6 @@ class Predicate(ABC):
     any methods because only paimon_python_java implement it and
     the Java implementation convert it to Java object."""
 
-    @abstractmethod
-    def test(self, record):
-        """test"""
-
 
 class PredicateBuilder(ABC):
     """A utility class to create Predicate object for common filter conditions."""

@@ -18,7 +18,7 @@
 
 import pyarrow as pa
 
-from pypaimon import Schema
+from pypaimon.api import Schema
 from pypaimon.py4j.java_gateway import get_gateway
 
 

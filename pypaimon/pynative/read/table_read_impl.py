@@ -96,7 +96,7 @@ class TableReadImpl(TableRead):
         if not arrow_batches:
             return pa.Table.from_arrays([], schema=schema)
 
-        return pa.concat_batches(arrow_batches)
+        return pa.Table.from_batches(arrow_batches)
 
     def to_arrow_batch_reader(self, splits: List[Split]) -> pa.RecordBatchReader:
         raise PyNativeNotImplementedError("to_arrow_batch_reader")

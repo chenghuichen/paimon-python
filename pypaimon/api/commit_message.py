@@ -21,7 +21,3 @@ from abc import ABC, abstractmethod
 
 class CommitMessage(ABC):
     """Commit message collected from writer."""
-
-    @abstractmethod
-    def is_empty(self):
-        """"""

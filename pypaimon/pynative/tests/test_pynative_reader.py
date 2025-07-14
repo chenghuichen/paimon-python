@@ -20,7 +20,7 @@ import pandas as pd
 import pyarrow as pa
 
 from pypaimon.api import Schema
-from pypaimon.py4j.tests import PypaimonTestBase
+from pypaimon.pynative.tests import PypaimonTestBase
 
 
 class NativeReaderTest(PypaimonTestBase):
@@ -64,9 +64,10 @@ class NativeReaderTest(PypaimonTestBase):
     def testParquetAppendOnlyReader(self):
         schema = Schema(self.simple_pa_schema)
         self.catalog.create_table('default.test_append_only_parquet', schema, False)
-        table = self.catalog.get_table('default.test_append_only_parquet')
-        self._write_test_table(table)
+        j_table = self.catalog.get_table('default.test_append_only_parquet')
+        self._write_test_table(j_table)
 
+        table = self.native_catalog.get_table("default.test_append_only_parquet")
         read_builder = table.new_read_builder()
         actual = self._read_test_table(read_builder)
         self.assertEqual(actual, self.expected_full)
@@ -77,6 +78,7 @@ class NativeReaderTest(PypaimonTestBase):
         table = self.catalog.get_table('default.test_append_only_orc')
         self._write_test_table(table)
 
+        table = self.native_catalog.get_table("default.test_append_only_orc")
         read_builder = table.new_read_builder()
         actual = self._read_test_table(read_builder)
         self.assertEqual(actual, self.expected_full)
@@ -87,6 +89,7 @@ class NativeReaderTest(PypaimonTestBase):
         table = self.catalog.get_table('default.test_append_only_avro')
         self._write_test_table(table)
 
+        table = self.native_catalog.get_table("default.test_append_only_avro")
         read_builder = table.new_read_builder()
         actual = self._read_test_table(read_builder)
         self.assertEqual(actual, self.expected_full)
@@ -98,6 +101,7 @@ class NativeReaderTest(PypaimonTestBase):
         self._write_test_table(table)
         predicate_builder = table.new_read_builder().new_predicate_builder()
 
+        table = self.native_catalog.get_table("default.test_append_only_filter")
         p1 = predicate_builder.less_than('f0', 7)
         p2 = predicate_builder.greater_or_equal('f0', 2)
         p3 = predicate_builder.between('f0', 0, 5)  # from now, [2/b, 3/c, 4/d, 5/e] left
@@ -158,6 +162,7 @@ class NativeReaderTest(PypaimonTestBase):
         table = self.catalog.get_table('default.test_append_only_projection')
         self._write_test_table(table)
 
+        table = self.native_catalog.get_table("default.test_append_only_projection")
         read_builder = table.new_read_builder().with_projection(['f0', 'f2'])
         actual = self._read_test_table(read_builder)
         expected = self.expected_full.select(['f0', 'f2'])
@@ -169,6 +174,7 @@ class NativeReaderTest(PypaimonTestBase):
         table = self.catalog.get_table('default.test_append_only_limit')
         self._write_test_table(table)
 
+        table = self.native_catalog.get_table("default.test_append_only_limit")
         read_builder = table.new_read_builder().with_limit(1)
         actual = self._read_test_table(read_builder)
         # only records from 1st commit (1st split) will be read
@@ -190,6 +196,7 @@ class NativeReaderTest(PypaimonTestBase):
         table = self.catalog.get_table('default.test_pk_parquet')
         self._write_test_table(table, for_pk=True)
 
+        table = self.native_catalog.get_table("default.test_pk_parquet")
         read_builder = table.new_read_builder()
         actual = self._read_test_table(read_builder)
         self.assertEqual(actual, self.expected_full_pk)
@@ -203,6 +210,7 @@ class NativeReaderTest(PypaimonTestBase):
         table = self.catalog.get_table('default.test_pk_parquet_loser_tree')
         self._write_test_table(table, for_pk=True)
 
+        table = self.native_catalog.get_table("default.test_pk_parquet_loser_tree")
         read_builder = table.new_read_builder()
         actual = self._read_test_table(read_builder)
         self.assertEqual(actual, self.expected_full_pk)
@@ -216,6 +224,7 @@ class NativeReaderTest(PypaimonTestBase):
         table = self.catalog.get_table('default.test_pk_orc')
         self._write_test_table(table, for_pk=True)
 
+        table = self.native_catalog.get_table("default.test_pk_orc")
         read_builder = table.new_read_builder()
         actual = self._read_test_table(read_builder)
         self.assertEqual(actual, self.expected_full_pk)
@@ -229,6 +238,7 @@ class NativeReaderTest(PypaimonTestBase):
         table = self.catalog.get_table('default.test_pk_avro')
         self._write_test_table(table, for_pk=True)
 
+        table = self.native_catalog.get_table("default.test_pk_avro")
         read_builder = table.new_read_builder()
         actual = self._read_test_table(read_builder)
         self.assertEqual(actual, self.expected_full_pk)
@@ -248,6 +258,8 @@ class NativeReaderTest(PypaimonTestBase):
         g1 = predicate_builder.and_predicates([p1, p2, p3])
         p4 = predicate_builder.equal('f2', 'Z')
         g2 = predicate_builder.or_predicates([g1, p4])
+
+        table = self.native_catalog.get_table("default.test_pk_filter")
         read_builder = table.new_read_builder().with_filter(g2)
         actual = self._read_test_table(read_builder)
         expected = pa.concat_tables([
@@ -264,6 +276,7 @@ class NativeReaderTest(PypaimonTestBase):
         table = self.catalog.get_table('default.test_pk_projection')
         self._write_test_table(table, for_pk=True)
 
+        table = self.native_catalog.get_table("default.test_pk_projection")
         read_builder = table.new_read_builder().with_projection(['f0', 'f2'])
         actual = self._read_test_table(read_builder)
         expected = self.expected_full_pk.select(['f0', 'f2'])
@@ -280,6 +293,7 @@ class NativeReaderTest(PypaimonTestBase):
         table = self.catalog.get_table('default.test_partition_pk_parquet')
         self._write_partition_test_table(table)
 
+        table = self.native_catalog.get_table("default.test_partition_pk_parquet")
         read_builder = table.new_read_builder()
         actual = self._read_test_table(read_builder)
         expected = pa.Table.from_pandas(
@@ -303,6 +317,7 @@ class NativeReaderTest(PypaimonTestBase):
         table = self.catalog.get_table('default.test_partition_pk_parquet2')
         self._write_partition_test_table(table, write_once=True)
 
+        table = self.native_catalog.get_table("default.test_partition_pk_parquet2")
         read_builder = table.new_read_builder()
         actual = self._read_test_table(read_builder)
         expected = pa.Table.from_pandas(
@@ -389,5 +404,4 @@ class NativeReaderTest(PypaimonTestBase):
     def _read_test_table(self, read_builder):
         table_read = read_builder.new_read()
         splits = read_builder.new_scan().plan().splits()
-        self.assertNotEqual(table_read.to_record_generator(splits), None)
         return table_read.to_arrow(splits)

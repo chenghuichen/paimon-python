@@ -21,6 +21,7 @@ import shutil
 import tempfile
 import unittest
 
+from pypaimon.api.catalog_factory import CatalogFactory
 from pypaimon.py4j import Catalog, constants
 
 
@@ -42,6 +43,7 @@ class PypaimonTestBase(unittest.TestCase):
         cls.warehouse = os.path.join(cls.tempdir, 'warehouse')
         cls.catalog = Catalog.create({'warehouse': cls.warehouse})
         cls.catalog.create_database('default', False)
+        cls.native_catalog = CatalogFactory.create({"warehouse": cls.warehouse})
 
     @classmethod
     def tearDownClass(cls):
