@@ -328,14 +328,9 @@ class FileIO:
         try:
             import pyarrow.parquet as pq
 
-            table_to_write = pa.Table.from_batches([data])
             with self.new_output_stream(path) as output_stream:
-                pq.write_table(
-                    table_to_write,
-                    output_stream,
-                    compression=compression,
-                    **kwargs
-                )
+                with pq.ParquetWriter(output_stream, data.schema, compression=compression, **kwargs) as pw:
+                    pw.write_batch(data)
 
         except Exception as e:
             self.delete_quietly(path)
