@@ -58,7 +58,7 @@ class DataFileBatchReader(RecordBatchReader):
                     if real_index < record_batch.num_columns:
                         inter_arrays.append(record_batch.column(real_index))
         else:
-            inter_arrays = record_batch.num_columns
+            inter_arrays = record_batch.columns
 
         if self.index_mapping is not None:
             mapped_arrays = []

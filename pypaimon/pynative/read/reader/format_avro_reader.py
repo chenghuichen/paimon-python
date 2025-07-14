@@ -63,7 +63,7 @@ class FormatAvroReader(RecordBatchReader):
 
         if records_in_batch == 0:
             return None
-        return pa.RecordBatch.from_arrays(columns_data, names=[f'col_{i}' for i in range(num_columns)])
+        return pa.RecordBatch.from_arrays(columns_data, names=self._fields)
 
     def close(self):
         if self._file:
