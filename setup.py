@@ -45,7 +45,8 @@ PACKAGES = [
 install_requires = [
     'py4j==0.10.9.7',
     'pandas>=1.3.0',
-    'pyarrow>=5.0.0'
+    'pyarrow>=5.0.0',
+    'polars>=1.31.0'
 ]
 
 long_description = 'See Apache Paimon Python API \
