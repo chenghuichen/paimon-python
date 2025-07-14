@@ -254,30 +254,6 @@ class RawFileSplitRead(SplitRead):
 class MergeFileSplitRead(SplitRead):
     def kv_reader_supplier(self, file_path):
         reader_supplier = partial(self.file_reader_supplier, file_path)
-        return KeyValueUnwrapRecordReader(DropDeleteRecordReader(
-            KeyValueWrapReader(reader_supplier(), len(self.trimmed_primary_key), self.value_arity)))
-
-    def create_reader(self) -> RecordReader:
-        data_readers = []
-        for file_path in self.split.file_paths:
-            supplier = partial(self.kv_reader_supplier, file_path)
-            data_readers.append(supplier)
-
-        if not data_readers:
-            return EmptyFileRecordReader()
-        concat_reader = ConcatRecordReader(data_readers)
-        if self.predicate:
-            return FilterRecordReader(concat_reader, self.predicate)
-        else:
-            return concat_reader
-
-    def _get_all_data_fields(self):
-        return self._create_key_value_fields(self.table.fields)
-
-
-class MergeFileSplitRead2(SplitRead):
-    def kv_reader_supplier(self, file_path):
-        reader_supplier = partial(self.file_reader_supplier, file_path)
         return KeyValueWrapReader(reader_supplier(), len(self.trimmed_primary_key), self.value_arity)
 
     def section_reader_supplier(self, section: List[SortedRun]):
