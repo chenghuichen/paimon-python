@@ -18,7 +18,7 @@
 
 from typing import Optional
 
-from pypaimon.api import Predicate
+from pypaimon.pynative.common.predicate import PredicateImpl
 from pypaimon.pynative.read.reader.iface.record_reader import RecordIterator, RecordReader
 from pypaimon.pynative.row.internal_row import InternalRow
 
@@ -28,7 +28,7 @@ class FilterRecordReader(RecordReader[InternalRow]):
     A RecordReader that implements filtering functionality.
     """
 
-    def __init__(self, reader: RecordReader[InternalRow], predicate: Predicate):
+    def __init__(self, reader: RecordReader[InternalRow], predicate: PredicateImpl):
         self.reader = reader
         self.predicate = predicate
 
@@ -47,7 +47,7 @@ class FilterRecordIterator(RecordIterator[InternalRow]):
     A RecordIterator that implements filtering functionality.
     """
 
-    def __init__(self, iterator: RecordIterator[InternalRow], predicate: Predicate):
+    def __init__(self, iterator: RecordIterator[InternalRow], predicate: PredicateImpl):
         self.iterator = iterator
         self.predicate = predicate
 

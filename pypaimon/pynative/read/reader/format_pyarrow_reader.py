@@ -37,7 +37,7 @@ class FormatPyArrowReader(RecordBatchReader):
     def __init__(self, file_io: FileIO, file_format: str, file_path: str, primary_keys: List[str],
                  fields: List[str], predicate: Predicate, batch_size: int = 4096):
 
-        if primary_keys is not None:
+        if primary_keys:
             # TODO: utilize predicate to improve performance
             predicate = None
 

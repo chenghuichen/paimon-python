@@ -15,7 +15,7 @@
 #  See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
-
+from collections import defaultdict
 from typing import List, Optional, Callable
 
 from pypaimon.api import TableScan, Plan
@@ -67,11 +67,11 @@ class TableScanImpl(TableScan):
         if self.predicate:
             file_entries = self._filter_by_predicate(file_entries)
 
-        splits = []
-        partitioned_split = {}
+        partitioned_split = defaultdict(list)
         for entry in file_entries:
-            partitioned_split.setdefault((tuple(entry.partition.values), entry.bucket), []).append(entry)
+            partitioned_split[(tuple(entry.partition.values), entry.bucket)].append(entry)
 
+        splits = []
         for key, values in partitioned_split.items():
             if self.table.is_primary_key_table:
                 splits += self._create_primary_key_splits(values)
@@ -210,7 +210,6 @@ class TableScanImpl(TableScan):
             return []
 
         data_files: List[DataFileMeta] = [e.file for e in file_entries]
-        data_files.sort(key=lambda f: f.file_size)
 
         def weight_func(f: DataFileMeta) -> int:
             return max(f.file_size, self.open_file_cost)

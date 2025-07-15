@@ -241,11 +241,8 @@ class RawFileSplitRead(SplitRead):
 
         if not data_readers:
             return EmptyFileRecordReader()
-        concat_reader = ConcatBatchReader(data_readers)
-        if self.predicate:
-            return FilterRecordReader(concat_reader, self.predicate)
-        else:
-            return concat_reader
+        # no need for filter, all predicates has pushed down
+        return ConcatBatchReader(data_readers)
 
     def _get_all_data_fields(self):
         return self.table.fields
