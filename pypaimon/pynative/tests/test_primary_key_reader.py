@@ -29,37 +29,17 @@ class NativeReaderTest(PypaimonTestBase):
     def setUpClass(cls):
         super().setUpClass()
         cls.simple_pa_schema = pa.schema([
-            ('f0', pa.int64()),
-            ('f1', pa.string()),
-            ('f2', pa.string())
-        ])
-        cls.pk_pa_schema = pa.schema([
-            ('f0', pa.int64(), False),
-            ('f1', pa.string()),
-            ('f2', pa.string())
-        ])
-        cls.partition_pk_pa_schema = pa.schema([
             ('user_id', pa.int64(), False),
             ('item_id', pa.int64()),
             ('behavior', pa.string()),
             ('dt', pa.string(), False)
         ])
-        cls._expected_full_data = pd.DataFrame({
-            'f0': [1, 2, 3, 4, 5, 6, 7, 8],
-            'f1': ['a', 'b', 'c', None, 'e', 'f', 'g', 'h'],
-            'f2': ['A', 'B', 'C', 'D', 'E', 'F', 'G', None],
-        })
-        cls._expected_full_data['f0'] = cls._expected_full_data['f0'].astype('int64')
-        cls.expected_full = pa.Table.from_pandas(cls._expected_full_data,
-                                                 schema=cls.simple_pa_schema)
-        cls._expected_full_data_pk = pd.DataFrame({
-            'f0': [1, 2, 3, 4, 6],
-            'f1': ['a', 'x', 'y', None, 'z'],
-            'f2': ['A', 'X', 'Y', 'D', 'Z'],
-        })
-        cls._expected_full_data_pk['f0'] = cls._expected_full_data_pk['f0'].astype('int64')
-        cls.expected_full_pk = pa.Table.from_pandas(cls._expected_full_data_pk,
-                                                    schema=cls.pk_pa_schema)
+        cls.expected_full = pa.Table.from_pydict({
+            'user_id': [1, 2, 3, 4, 5, 6, 7, 8],
+            'item_id': [1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008],
+            'behavior': ['a', 'b', 'c', None, 'e', 'f', 'g', 'h'],
+            'dt': ['p1', 'p1', 'p2', 'p1', 'p2', 'p1', 'p2', 'p2'],
+        }, schema=cls.simple_pa_schema)
 
     def testParquetAppendOnlyReader(self):
         schema = Schema(self.simple_pa_schema)
@@ -75,8 +55,8 @@ class NativeReaderTest(PypaimonTestBase):
     def testOrcAppendOnlyReader(self):
         schema = Schema(self.simple_pa_schema, options={'file.format': 'orc'})
         self.catalog.create_table('default.test_append_only_orc', schema, False)
-        table = self.catalog.get_table('default.test_append_only_orc')
-        self._write_test_table(table)
+        j_table = self.catalog.get_table('default.test_append_only_orc')
+        self._write_test_table(j_table)
 
         table = self.native_catalog.get_table("default.test_append_only_orc")
         read_builder = table.new_read_builder()
@@ -86,8 +66,8 @@ class NativeReaderTest(PypaimonTestBase):
     def testAvroAppendOnlyReader(self):
         schema = Schema(self.simple_pa_schema, options={'file.format': 'avro'})
         self.catalog.create_table('default.test_append_only_avro', schema, False)
-        table = self.catalog.get_table('default.test_append_only_avro')
-        self._write_test_table(table)
+        j_table = self.catalog.get_table('default.test_append_only_avro')
+        self._write_test_table(j_table)
 
         table = self.native_catalog.get_table("default.test_append_only_avro")
         read_builder = table.new_read_builder()
@@ -97,8 +77,8 @@ class NativeReaderTest(PypaimonTestBase):
     def testAppendOnlyReaderWithFilter(self):
         schema = Schema(self.simple_pa_schema)
         self.catalog.create_table('default.test_append_only_filter', schema, False)
-        table = self.catalog.get_table('default.test_append_only_filter')
-        self._write_test_table(table)
+        j_table = self.catalog.get_table('default.test_append_only_filter')
+        self._write_test_table(j_table)
 
         table = self.native_catalog.get_table("default.test_append_only_filter")
         predicate_builder = table.new_read_builder().new_predicate_builder()
@@ -114,7 +94,7 @@ class NativeReaderTest(PypaimonTestBase):
         expected = pa.concat_tables([
             self.expected_full.slice(4, 1)  # 5/e
         ])
-        self.assertEqual(actual, expected)
+        self.assertEqual(actual.sort_by('f0'), expected)
 
         p7 = predicate_builder.startswith('f1', 'a')
         p8 = predicate_builder.endswith('f2', 'C')
@@ -131,7 +111,7 @@ class NativeReaderTest(PypaimonTestBase):
             self.expected_full.slice(5, 1),  # 6/f
             self.expected_full.slice(7, 1),  # 8/h
         ])
-        self.assertEqual(actual, expected)
+        self.assertEqual(actual.sort_by('f0'), expected)
 
         g3 = predicate_builder.and_predicates([g1, g2])
         read_builder = table.new_read_builder().with_filter(g3)
@@ -139,7 +119,7 @@ class NativeReaderTest(PypaimonTestBase):
         expected = pa.concat_tables([
             self.expected_full.slice(4, 1),  # 5/e
         ])
-        self.assertEqual(actual, expected)
+        self.assertEqual(actual.sort_by('f0'), expected)
 
         # Same as java, 'not_equal' will also filter records of 'None' value
         p12 = predicate_builder.not_equal('f1', 'f')
@@ -154,25 +134,25 @@ class NativeReaderTest(PypaimonTestBase):
             self.expected_full.slice(6, 1),  # 7/g
             self.expected_full.slice(7, 1),  # 8/h
         ])
-        self.assertEqual(actual, expected)
+        self.assertEqual(actual.sort_by('f0'), expected)
 
     def testAppendOnlyReaderWithProjection(self):
         schema = Schema(self.simple_pa_schema)
         self.catalog.create_table('default.test_append_only_projection', schema, False)
-        table = self.catalog.get_table('default.test_append_only_projection')
-        self._write_test_table(table)
+        j_table = self.catalog.get_table('default.test_append_only_projection')
+        self._write_test_table(j_table)
 
         table = self.native_catalog.get_table("default.test_append_only_projection")
-        read_builder = table.new_read_builder().with_projection(['f0', 'f2'])
-        actual = self._read_test_table(read_builder)
-        expected = self.expected_full.select(['f0', 'f2'])
+        read_builder = table.new_read_builder().with_projection(['f2', 'f0'])
+        actual = self._read_test_table(read_builder).sort_by('col_0')
+        expected = self.expected_full.select(['f2', 'f0'])
         self.assertEqual(actual, expected)
 
     def testAppendOnlyReaderWithLimit(self):
         schema = Schema(self.simple_pa_schema, options={'source.split.target-size': '1mb'})
         self.catalog.create_table('default.test_append_only_limit', schema, False)
-        table = self.catalog.get_table('default.test_append_only_limit')
-        self._write_test_table(table)
+        j_table = self.catalog.get_table('default.test_append_only_limit')
+        self._write_test_table(j_table)
 
         table = self.native_catalog.get_table("default.test_append_only_limit")
         read_builder = table.new_read_builder().with_limit(1)

@@ -117,7 +117,7 @@ class SplitRead(ABC):
         return all_data_fields
 
     def create_index_mapping(self):
-        base_index_mapping = self._create_base_index_mapping(self.read_fields, self._get_all_data_fields())
+        base_index_mapping = self._create_base_index_mapping(self.read_fields, self._get_read_data_fields())
         trimmed_key_mapping, _ = self._get_trimmed_fields(self._get_read_data_fields(), self._get_all_data_fields())
         if base_index_mapping is None:
             mapping = trimmed_key_mapping
@@ -209,7 +209,7 @@ class SplitRead(ABC):
         partition_mapping = self._construct_partition_mapping()
         if not partition_mapping:
             return None
-        return PartitionInfo(partition_mapping, self.split.partition.values)
+        return PartitionInfo(partition_mapping, self.split.partition)
 
     def _construct_partition_mapping(self) -> List[int]:
         _, trimmed_fields = self._get_trimmed_fields(

@@ -38,13 +38,11 @@ if TYPE_CHECKING:
 class TableReadImpl(TableRead):
     """Implementation of TableRead for native Python reading."""
 
-    def __init__(self, table, predicate: Optional[PredicateImpl], projection: Optional[List[str]],
-                 read_type: List[DataField]):
+    def __init__(self, table, predicate: Optional[PredicateImpl], read_type: List[DataField]):
         from pypaimon.pynative.table.file_store_table import FileStoreTable
 
         self.table: FileStoreTable = table
         self.predicate = predicate
-        self.projection = projection
         self.read_type = read_type
 
     def to_iterator(self, splits: List[Split]) -> Iterator:

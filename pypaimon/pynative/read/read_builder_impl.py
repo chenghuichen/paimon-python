@@ -53,7 +53,6 @@ class ReadBuilderImpl(ReadBuilder):
         return TableScanImpl(
             table=self.table,
             predicate=self._predicate,
-            projection=self._projection,
             limit=self._limit,
             read_type=self.read_type()
         )
@@ -62,7 +61,6 @@ class ReadBuilderImpl(ReadBuilder):
         return TableReadImpl(
             table=self.table,
             predicate=self._predicate,
-            projection=self._projection,
             read_type=self.read_type()
         )
 

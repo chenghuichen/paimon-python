@@ -33,13 +33,12 @@ from pypaimon.pynative.table.manifest_file_manager import ManifestFileManager
 class TableScanImpl(TableScan):
     """Implementation of TableScan for native Python reading."""
 
-    def __init__(self, table, predicate: Optional[PredicateImpl], projection: Optional[List[str]],
-                 limit: Optional[int], read_type: List[DataField]):
+    def __init__(self, table, predicate: Optional[PredicateImpl], limit: Optional[int], read_type: List[DataField]):
         from pypaimon.pynative.table.file_store_table import FileStoreTable
 
         self.table: FileStoreTable = table
         self.predicate = predicate
-        self.projection = projection
+        self.predicate = predicate
         self.limit = limit
         self.read_type = read_type
 

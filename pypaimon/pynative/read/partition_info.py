@@ -18,6 +18,7 @@
 
 from typing import Any, List
 
+from pypaimon.pynative.common.data_field import DataField
 from pypaimon.pynative.row.binary_row import BinaryRow
 
 
@@ -26,9 +27,10 @@ class PartitionInfo:
     Partition information about how the row mapping of outer row.
     """
 
-    def __init__(self, mapping: List[int], partition_values: List[BinaryRow]):
+    def __init__(self, mapping: List[int], partition: BinaryRow):
         self.mapping = mapping
-        self.partition_values = partition_values
+        self.partition_values = partition.values
+        self.partition_fields = partition.fields
 
     def size(self) -> int:
         return len(self.mapping) - 1
@@ -39,6 +41,6 @@ class PartitionInfo:
     def get_real_index(self, pos: int) -> int:
         return abs(self.mapping[pos]) - 1
 
-    def get_partition_value(self, pos: int) -> Any:
+    def get_partition_value(self, pos: int) -> (Any, DataField):
         real_index = self.get_real_index(pos)
-        return self.partition_values[real_index]
+        return self.partition_values[real_index], self.partition_fields[real_index]

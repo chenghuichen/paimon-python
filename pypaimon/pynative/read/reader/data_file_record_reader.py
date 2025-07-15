@@ -29,9 +29,7 @@ class DataFileBatchReader(RecordBatchReader):
     Reads record batch from data files.
     """
 
-    def __init__(self, format_reader: RecordBatchReader,
-                 index_mapping: Optional[List[int]] = None,
-                 partition_info: Optional[PartitionInfo] = None):
+    def __init__(self, format_reader: RecordBatchReader, index_mapping: List[int], partition_info: PartitionInfo):
         self.format_reader = format_reader
         self.index_mapping = index_mapping
         self.partition_info = partition_info
@@ -45,32 +43,40 @@ class DataFileBatchReader(RecordBatchReader):
             return record_batch
 
         inter_arrays = []
+        inter_names = []
         num_rows = record_batch.num_rows
 
         if self.partition_info is not None:
             for i in range(self.partition_info.size()):
                 if self.partition_info.is_partition_row(i):
-                    partition_value = self.partition_info.get_partition_value(i)
+                    partition_value, partition_field = self.partition_info.get_partition_value(i)
                     const_array = pa.repeat(partition_value, num_rows)
                     inter_arrays.append(const_array)
+                    inter_names.append(partition_field.name)
                 else:
                     real_index = self.partition_info.get_real_index(i)
                     if real_index < record_batch.num_columns:
                         inter_arrays.append(record_batch.column(real_index))
+                        inter_names.append(record_batch.schema.field(real_index).name)
         else:
             inter_arrays = record_batch.columns
+            inter_names = record_batch.schema.names
 
         if self.index_mapping is not None:
             mapped_arrays = []
+            mapped_names = []
             for i, real_index in enumerate(self.index_mapping):
                 if 0 <= real_index < len(inter_arrays):
                     mapped_arrays.append(inter_arrays[real_index])
+                    mapped_names.append(inter_names[real_index])
                 else:
                     null_array = pa.nulls(num_rows)
                     mapped_arrays.append(null_array)
+                    mapped_names.append(f"null_col_{i}")
             inter_arrays = mapped_arrays
+            inter_names = mapped_names
 
-        return pa.RecordBatch.from_arrays(inter_arrays, names=[f"col_{i}" for i in range(len(inter_arrays))])
+        return pa.RecordBatch.from_arrays(inter_arrays, names=inter_names)
 
     def close(self) -> None:
         self.format_reader.close()
