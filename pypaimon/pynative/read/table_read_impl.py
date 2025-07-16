@@ -73,20 +73,20 @@ class TableReadImpl(TableRead):
                     for batch in iter(reader.read_arrow_batch, None):
                         arrow_batches.append(batch)
                 else:
-                    row_chunk = []
+                    row_tuple_chunk = []
                     for iterator in iter(reader.read_batch, None):
                         for row in iter(iterator.next, None):
                             if not isinstance(row, OffsetRow):
                                 raise TypeError(f"Expected OffsetRow, but got {type(row).__name__}")
-                            row_chunk.append(row)
+                            row_tuple_chunk.append(row.row_tuple[row.offset: row.offset + row.arity])
 
-                            if len(row_chunk) >= chunk_size:
-                                batch = convert_rows_to_arrow_batch(row_chunk, schema)
+                            if len(row_tuple_chunk) >= chunk_size:
+                                batch = convert_rows_to_arrow_batch(row_tuple_chunk, schema)
                                 arrow_batches.append(batch)
-                                row_chunk = []
+                                row_tuple_chunk = []
 
-                    if row_chunk:
-                        batch = convert_rows_to_arrow_batch(row_chunk, schema)
+                    if row_tuple_chunk:
+                        batch = convert_rows_to_arrow_batch(row_tuple_chunk, schema)
                         arrow_batches.append(batch)
             finally:
                 reader.close()
@@ -94,7 +94,9 @@ class TableReadImpl(TableRead):
         if not arrow_batches:
             return pa.Table.from_arrays([], schema=schema)
 
-        return pa.Table.from_batches(arrow_batches)
+        unified_schema = pa.unify_schemas([b.schema for b in arrow_batches])
+        casted_batches = [b.cast(target_schema=unified_schema) for b in arrow_batches]
+        return pa.Table.from_batches(casted_batches)
 
     def to_arrow_batch_reader(self, splits: List[Split]) -> pa.RecordBatchReader:
         raise PyNativeNotImplementedError("to_arrow_batch_reader")
@@ -127,8 +129,7 @@ class TableReadImpl(TableRead):
             )
 
 
-def convert_rows_to_arrow_batch(rows: List[OffsetRow], schema: pa.Schema) -> pa.RecordBatch:
-    list_of_row_tuples = [r.row_tuple[r.offset: r.offset + r.arity] for r in rows]
-    columns_data = zip(*list_of_row_tuples)
+def convert_rows_to_arrow_batch(row_tuples: List[tuple], schema: pa.Schema) -> pa.RecordBatch:
+    columns_data = zip(*row_tuples)
     pydict = {name: list(column) for name, column in zip(schema.names, columns_data)}
     return pa.RecordBatch.from_pydict(pydict, schema=schema)

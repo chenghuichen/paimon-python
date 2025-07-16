@@ -29,10 +29,12 @@ class DataFileBatchReader(RecordBatchReader):
     Reads record batch from data files.
     """
 
-    def __init__(self, format_reader: RecordBatchReader, index_mapping: List[int], partition_info: PartitionInfo):
+    def __init__(self, format_reader: RecordBatchReader, index_mapping: List[int], partition_info: PartitionInfo,
+                 system_primary_key: Optional[List[str]]):
         self.format_reader = format_reader
         self.index_mapping = index_mapping
         self.partition_info = partition_info
+        self.system_primary_key = system_primary_key
 
     def read_arrow_batch(self) -> Optional[RecordBatch]:
         record_batch = self.format_reader.read_arrow_batch()
@@ -73,6 +75,12 @@ class DataFileBatchReader(RecordBatchReader):
                     null_array = pa.nulls(num_rows)
                     mapped_arrays.append(null_array)
                     mapped_names.append(f"null_col_{i}")
+
+            if self.system_primary_key:
+                for i in range(len(self.system_primary_key)):
+                    if not mapped_names[i].startswith("_KEY_"):
+                        mapped_names[i] = f"_KEY_{mapped_names[i]}"
+
             inter_arrays = mapped_arrays
             inter_names = mapped_names
 

@@ -16,7 +16,6 @@
 # limitations under the License.
 ################################################################################
 
-import pandas as pd
 import pyarrow as pa
 
 from pypaimon.api import Schema
@@ -141,6 +140,18 @@ class NativeAppendOnlyReaderTest(PypaimonTestBase):
         expected = self.expected.select(['dt', 'user_id'])
         self.assertEqual(actual, expected)
 
+    def testAvroAppendOnlyReaderWithProjection(self):
+        schema = Schema(self.simple_pa_schema, partition_keys=['dt'], options={'file.format': 'avro'})
+        self.catalog.create_table('default.test_avro_append_only_projection', schema, False)
+        j_table = self.catalog.get_table('default.test_avro_append_only_projection')
+        self._write_test_table(j_table)
+
+        table = self.native_catalog.get_table("default.test_avro_append_only_projection")
+        read_builder = table.new_read_builder().with_projection(['dt', 'user_id'])
+        actual = self._read_test_table(read_builder).sort_by('user_id')
+        expected = self.expected.select(['dt', 'user_id'])
+        self.assertEqual(actual, expected)
+
     def testAppendOnlyReaderWithLimit(self):
         schema = Schema(self.simple_pa_schema, partition_keys=['dt'])
         self.catalog.create_table('default.test_append_only_limit', schema, False)
@@ -153,8 +164,6 @@ class NativeAppendOnlyReaderTest(PypaimonTestBase):
         # only records from 1st commit (1st split) will be read
         # might be split of "dt=1" or split of "dt=2"
         self.assertEqual(actual.num_rows, 4)
-
-    # TODO: test cases for avro filter and projection
 
     def _write_test_table(self, table):
         write_builder = table.new_batch_write_builder()

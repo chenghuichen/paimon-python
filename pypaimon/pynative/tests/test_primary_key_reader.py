@@ -16,7 +16,6 @@
 # limitations under the License.
 ################################################################################
 
-import pandas as pd
 import pyarrow as pa
 
 from pypaimon.api import Schema
@@ -29,296 +28,102 @@ class NativeReaderTest(PypaimonTestBase):
     def setUpClass(cls):
         super().setUpClass()
         cls.simple_pa_schema = pa.schema([
-            ('user_id', pa.int64(), False),
+            ('user_id', pa.int64()),
             ('item_id', pa.int64()),
             ('behavior', pa.string()),
-            ('dt', pa.string(), False)
+            ('dt', pa.string())
         ])
-        cls.expected_full = pa.Table.from_pydict({
-            'user_id': [1, 2, 3, 4, 5, 6, 7, 8],
-            'item_id': [1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008],
-            'behavior': ['a', 'b', 'c', None, 'e', 'f', 'g', 'h'],
-            'dt': ['p1', 'p1', 'p2', 'p1', 'p2', 'p1', 'p2', 'p2'],
+        cls.expected = pa.Table.from_pydict({
+            'user_id': [1, 2, 3, 4, 5, 7, 8],
+            'item_id': [1001, 1002, 1003, 1004, 1005, 1007, 1008],
+            'behavior': ['a', 'b-new', 'c', None, 'e', 'g', 'h'],
+            'dt': ['p1', 'p1', 'p2', 'p1', 'p2', 'p1', 'p2'],
         }, schema=cls.simple_pa_schema)
 
-    def testParquetAppendOnlyReader(self):
-        schema = Schema(self.simple_pa_schema)
-        self.catalog.create_table('default.test_append_only_parquet', schema, False)
-        j_table = self.catalog.get_table('default.test_append_only_parquet')
-        self._write_test_table(j_table)
-
-        table = self.native_catalog.get_table("default.test_append_only_parquet")
-        read_builder = table.new_read_builder()
-        actual = self._read_test_table(read_builder).sort_by('f0')
-        self.assertEqual(actual, self.expected_full)
-
-    def testOrcAppendOnlyReader(self):
-        schema = Schema(self.simple_pa_schema, options={'file.format': 'orc'})
-        self.catalog.create_table('default.test_append_only_orc', schema, False)
-        j_table = self.catalog.get_table('default.test_append_only_orc')
-        self._write_test_table(j_table)
-
-        table = self.native_catalog.get_table("default.test_append_only_orc")
-        read_builder = table.new_read_builder()
-        actual = self._read_test_table(read_builder).sort_by('f0')
-        self.assertEqual(actual, self.expected_full)
-
-    def testAvroAppendOnlyReader(self):
-        schema = Schema(self.simple_pa_schema, options={'file.format': 'avro'})
-        self.catalog.create_table('default.test_append_only_avro', schema, False)
-        j_table = self.catalog.get_table('default.test_append_only_avro')
-        self._write_test_table(j_table)
-
-        table = self.native_catalog.get_table("default.test_append_only_avro")
-        read_builder = table.new_read_builder()
-        actual = self._read_test_table(read_builder).sort_by('f0')
-        self.assertEqual(actual, self.expected_full)
-
-    def testAppendOnlyReaderWithFilter(self):
-        schema = Schema(self.simple_pa_schema)
-        self.catalog.create_table('default.test_append_only_filter', schema, False)
-        j_table = self.catalog.get_table('default.test_append_only_filter')
-        self._write_test_table(j_table)
-
-        table = self.native_catalog.get_table("default.test_append_only_filter")
-        predicate_builder = table.new_read_builder().new_predicate_builder()
-        p1 = predicate_builder.less_than('f0', 7)
-        p2 = predicate_builder.greater_or_equal('f0', 2)
-        p3 = predicate_builder.between('f0', 0, 5)  # from now, [2/b, 3/c, 4/d, 5/e] left
-        p4 = predicate_builder.is_not_in('f1', ['a', 'b'])  # exclude 2/b
-        p5 = predicate_builder.is_in('f2', ['A', 'B', 'D', 'E', 'F', 'G'])  # exclude 3/c
-        p6 = predicate_builder.is_not_null('f1')    # exclude 4/d
-        g1 = predicate_builder.and_predicates([p1, p2, p3, p4, p5, p6])
-        read_builder = table.new_read_builder().with_filter(g1)
-        actual = self._read_test_table(read_builder)
-        expected = pa.concat_tables([
-            self.expected_full.slice(4, 1)  # 5/e
-        ])
-        self.assertEqual(actual.sort_by('f0'), expected)
-
-        p7 = predicate_builder.startswith('f1', 'a')
-        p8 = predicate_builder.endswith('f2', 'C')
-        p9 = predicate_builder.contains('f2', 'E')
-        p10 = predicate_builder.equal('f1', 'f')
-        p11 = predicate_builder.is_null('f2')
-        g2 = predicate_builder.or_predicates([p7, p8, p9, p10, p11])
-        read_builder = table.new_read_builder().with_filter(g2)
-        actual = self._read_test_table(read_builder)
-        expected = pa.concat_tables([
-            self.expected_full.slice(0, 1),  # 1/a
-            self.expected_full.slice(2, 1),  # 3/c
-            self.expected_full.slice(4, 1),  # 5/e
-            self.expected_full.slice(5, 1),  # 6/f
-            self.expected_full.slice(7, 1),  # 8/h
-        ])
-        self.assertEqual(actual.sort_by('f0'), expected)
-
-        g3 = predicate_builder.and_predicates([g1, g2])
-        read_builder = table.new_read_builder().with_filter(g3)
-        actual = self._read_test_table(read_builder)
-        expected = pa.concat_tables([
-            self.expected_full.slice(4, 1),  # 5/e
-        ])
-        self.assertEqual(actual.sort_by('f0'), expected)
-
-        # Same as java, 'not_equal' will also filter records of 'None' value
-        p12 = predicate_builder.not_equal('f1', 'f')
-        read_builder = table.new_read_builder().with_filter(p12)
-        actual = self._read_test_table(read_builder)
-        expected = pa.concat_tables([
-            # not only 6/f, but also 4/d will be filtered
-            self.expected_full.slice(0, 1),  # 1/a
-            self.expected_full.slice(1, 1),  # 2/b
-            self.expected_full.slice(2, 1),  # 3/c
-            self.expected_full.slice(4, 1),  # 5/e
-            self.expected_full.slice(6, 1),  # 7/g
-            self.expected_full.slice(7, 1),  # 8/h
-        ])
-        self.assertEqual(actual.sort_by('f0'), expected)
-
-    def testAppendOnlyReaderWithProjection(self):
-        schema = Schema(self.simple_pa_schema)
-        self.catalog.create_table('default.test_append_only_projection', schema, False)
-        j_table = self.catalog.get_table('default.test_append_only_projection')
-        self._write_test_table(j_table)
-
-        table = self.native_catalog.get_table("default.test_append_only_projection")
-        read_builder = table.new_read_builder().with_projection(['f2', 'f0'])
-        actual = self._read_test_table(read_builder).sort_by('col_0')
-        expected = self.expected_full.select(['f2', 'f0'])
-        self.assertEqual(actual, expected)
-
-    def testAppendOnlyReaderWithLimit(self):
-        schema = Schema(self.simple_pa_schema, options={'source.split.target-size': '1mb'})
-        self.catalog.create_table('default.test_append_only_limit', schema, False)
-        j_table = self.catalog.get_table('default.test_append_only_limit')
-        self._write_test_table(j_table)
-
-        table = self.native_catalog.get_table("default.test_append_only_limit")
-        read_builder = table.new_read_builder().with_limit(1)
-        actual = self._read_test_table(read_builder)
-        # only records from 1st commit (1st split) will be read
-        expected = pa.concat_tables([
-            self.expected_full.slice(0, 1),  # 1/a
-            self.expected_full.slice(1, 1),  # 2/b
-            self.expected_full.slice(2, 1),  # 3/c
-            self.expected_full.slice(3, 1),  # 4/d
-        ])
-        self.assertEqual(actual, expected)
-
-    # TODO: test cases for avro filter and projection
-
     def testPkParquetReader(self):
-        schema = Schema(self.pk_pa_schema, primary_keys=['f0'], options={
-            'bucket': '2'
-        })
+        schema = Schema(self.simple_pa_schema, partition_keys=['dt'], primary_keys=['user_id', 'dt'],
+                        options={'bucket': '2'})
         self.catalog.create_table('default.test_pk_parquet', schema, False)
-        table = self.catalog.get_table('default.test_pk_parquet')
-        self._write_test_table(table, for_pk=True)
+        j_table = self.catalog.get_table('default.test_pk_parquet')
+        self._write_test_table(j_table)
 
         table = self.native_catalog.get_table("default.test_pk_parquet")
         read_builder = table.new_read_builder()
-        actual = self._read_test_table(read_builder)
-        self.assertEqual(actual, self.expected_full_pk)
+        actual = self._read_test_table(read_builder).sort_by('user_id')
+        self.assertEqual(actual, self.expected)
 
-    def testPkParquetReaderWithMinHeap(self):
-        schema = Schema(self.pk_pa_schema, primary_keys=['f0'], options={
-            'bucket': '1',
-            'sort-engine': 'min-heap'
-        })
-        self.catalog.create_table('default.test_pk_parquet_loser_tree', schema, False)
-        table = self.catalog.get_table('default.test_pk_parquet_loser_tree')
-        self._write_test_table(table, for_pk=True)
-
-        table = self.native_catalog.get_table("default.test_pk_parquet_loser_tree")
-        read_builder = table.new_read_builder()
-        actual = self._read_test_table(read_builder)
-        self.assertEqual(actual, self.expected_full_pk)
-
-    def skip_testPkOrcReader(self):
-        schema = Schema(self.pk_pa_schema, primary_keys=['f0'], options={
+    def testPkOrcReader(self):
+        schema = Schema(self.simple_pa_schema, partition_keys=['dt'], primary_keys=['user_id', 'dt'], options={
             'bucket': '1',
             'file.format': 'orc'
         })
         self.catalog.create_table('default.test_pk_orc', schema, False)
-        table = self.catalog.get_table('default.test_pk_orc')
-        self._write_test_table(table, for_pk=True)
+        j_table = self.catalog.get_table('default.test_pk_orc')
+        self._write_test_table(j_table)
 
         table = self.native_catalog.get_table("default.test_pk_orc")
         read_builder = table.new_read_builder()
-        actual = self._read_test_table(read_builder)
-        self.assertEqual(actual, self.expected_full_pk)
+        actual = self._read_test_table(read_builder).sort_by('user_id')
+        self.assertEqual(actual, self.expected)
 
-    def skip_testPkAvroReader(self):
-        schema = Schema(self.pk_pa_schema, primary_keys=['f0'], options={
+    def testPkAvroReader(self):
+        schema = Schema(self.simple_pa_schema, partition_keys=['dt'], primary_keys=['user_id', 'dt'], options={
             'bucket': '1',
             'file.format': 'avro'
         })
         self.catalog.create_table('default.test_pk_avro', schema, False)
-        table = self.catalog.get_table('default.test_pk_avro')
-        self._write_test_table(table, for_pk=True)
+        j_table = self.catalog.get_table('default.test_pk_avro')
+        self._write_test_table(j_table)
 
         table = self.native_catalog.get_table("default.test_pk_avro")
         read_builder = table.new_read_builder()
-        actual = self._read_test_table(read_builder)
-        self.assertEqual(actual, self.expected_full_pk)
+        actual = self._read_test_table(read_builder).sort_by('user_id')
+        self.assertEqual(actual, self.expected)
 
     def testPkReaderWithFilter(self):
-        schema = Schema(self.pk_pa_schema, primary_keys=['f0'], options={
-            'bucket': '1'
-        })
+        schema = Schema(self.simple_pa_schema, partition_keys=['dt'], primary_keys=['user_id', 'dt'],
+                        options={'bucket': '2'})
         self.catalog.create_table('default.test_pk_filter', schema, False)
-        table = self.catalog.get_table('default.test_pk_filter')
-        self._write_test_table(table, for_pk=True)
-        predicate_builder = table.new_read_builder().new_predicate_builder()
-
-        p1 = predicate_builder.between('f0', 0, 5)
-        p2 = predicate_builder.is_not_in('f1', ['a', 'x'])
-        p3 = predicate_builder.is_not_null('f1')
-        g1 = predicate_builder.and_predicates([p1, p2, p3])
-        p4 = predicate_builder.equal('f2', 'Z')
-        g2 = predicate_builder.or_predicates([g1, p4])
+        j_table = self.catalog.get_table('default.test_pk_filter')
+        self._write_test_table(j_table)
 
         table = self.native_catalog.get_table("default.test_pk_filter")
-        read_builder = table.new_read_builder().with_filter(g2)
-        actual = self._read_test_table(read_builder)
+        predicate_builder = table.new_read_builder().new_predicate_builder()
+        p1 = predicate_builder.is_in('dt', ['p1'])
+        p2 = predicate_builder.between('user_id', 2, 7)
+        p3 = predicate_builder.is_not_null('behavior')
+        g1 = predicate_builder.and_predicates([p1, p2, p3])
+        read_builder = table.new_read_builder().with_filter(g1)
+        actual = self._read_test_table(read_builder).sort_by('user_id')
         expected = pa.concat_tables([
-            self.expected_full_pk.slice(2, 1),  # 3/y
-            self.expected_full_pk.slice(4, 1),  # 6/z
+            self.expected.slice(1, 1),  # 2/b
+            self.expected.slice(5, 1)   # 7/g
         ])
         self.assertEqual(actual, expected)
 
     def testPkReaderWithProjection(self):
-        schema = Schema(self.pk_pa_schema, primary_keys=['f0'], options={
-            'bucket': '1'
-        })
+        schema = Schema(self.simple_pa_schema, partition_keys=['dt'], primary_keys=['user_id', 'dt'],
+                        options={'bucket': '2'})
         self.catalog.create_table('default.test_pk_projection', schema, False)
-        table = self.catalog.get_table('default.test_pk_projection')
-        self._write_test_table(table, for_pk=True)
+        j_table = self.catalog.get_table('default.test_pk_projection')
+        self._write_test_table(j_table)
 
         table = self.native_catalog.get_table("default.test_pk_projection")
-        read_builder = table.new_read_builder().with_projection(['f0', 'f2'])
-        actual = self._read_test_table(read_builder)
-        expected = self.expected_full_pk.select(['f0', 'f2'])
+        read_builder = table.new_read_builder().with_projection(['dt', 'user_id', 'behavior'])
+        actual = self._read_test_table(read_builder).sort_by('user_id')
+        expected = self.expected.select(['dt', 'user_id', 'behavior'])
         self.assertEqual(actual, expected)
 
-    def testPartitionPkParquetReader(self):
-        schema = Schema(self.partition_pk_pa_schema,
-                        partition_keys=['dt'],
-                        primary_keys=['dt', 'user_id'],
-                        options={
-                            'bucket': '2'
-                        })
-        self.catalog.create_table('default.test_partition_pk_parquet', schema, False)
-        table = self.catalog.get_table('default.test_partition_pk_parquet')
-        self._write_partition_test_table(table)
-
-        table = self.native_catalog.get_table("default.test_partition_pk_parquet")
-        read_builder = table.new_read_builder()
-        actual = self._read_test_table(read_builder)
-        expected = pa.Table.from_pandas(
-            pd.DataFrame({
-                'user_id': [1, 2, 3, 4, 5, 7, 8],
-                'item_id': [1, 2, 3, 4, 5, 7, 8],
-                'behavior': ["b-1", "b-2-new", "b-3", None, "b-5", "b-7", None],
-                'dt': ["p-1", "p-1", "p-1", "p-1", "p-2", "p-1", "p-2"]
-            }),
-            schema=self.partition_pk_pa_schema)
-        self.assertEqual(actual.sort_by('user_id'), expected)
-
-    def testPartitionPkParquetReaderWriteOnce(self):
-        schema = Schema(self.partition_pk_pa_schema,
-                        partition_keys=['dt'],
-                        primary_keys=['dt', 'user_id'],
-                        options={
-                            'bucket': '1'
-                        })
-        self.catalog.create_table('default.test_partition_pk_parquet2', schema, False)
-        table = self.catalog.get_table('default.test_partition_pk_parquet2')
-        self._write_partition_test_table(table, write_once=True)
-
-        table = self.native_catalog.get_table("default.test_partition_pk_parquet2")
-        read_builder = table.new_read_builder()
-        actual = self._read_test_table(read_builder)
-        expected = pa.Table.from_pandas(
-            pd.DataFrame({
-                'user_id': [1, 2, 3, 4],
-                'item_id': [1, 2, 3, 4],
-                'behavior': ['b-1', 'b-2', 'b-3', None],
-                'dt': ['p-1', 'p-1', 'p-1', 'p-1']
-            }), schema=self.partition_pk_pa_schema)
-        self.assertEqual(actual, expected)
-
-    def _write_test_table(self, table, for_pk=False):
+    def _write_test_table(self, table):
         write_builder = table.new_batch_write_builder()
 
-        # first write
         table_write = write_builder.new_write()
         table_commit = write_builder.new_commit()
         data1 = {
-            'f0': [1, 2, 3, 4],
-            'f1': ['a', 'b', 'c', None],
-            'f2': ['A', 'B', 'C', 'D'],
+            'user_id': [1, 2, 3, 4],
+            'item_id': [1001, 1002, 1003, 1004],
+            'behavior': ['a', 'b', 'c', None],
+            'dt': ['p1', 'p1', 'p2', 'p1'],
         }
         pa_table = pa.Table.from_pydict(data1, schema=self.simple_pa_schema)
         table_write.write_arrow(pa_table)
@@ -326,56 +131,15 @@ class NativeReaderTest(PypaimonTestBase):
         table_write.close()
         table_commit.close()
 
-        # second write
-        table_write = write_builder.new_write()
-        table_commit = write_builder.new_commit()
-        if for_pk:
-            data2 = {
-                'f0': [2, 3, 6],
-                'f1': ['x', 'y', 'z'],
-                'f2': ['X', 'Y', 'Z'],
-            }
-        else:
-            data2 = {
-                'f0': [5, 6, 7, 8],
-                'f1': ['e', 'f', 'g', 'h'],
-                'f2': ['E', 'F', 'G', None],
-            }
-        pa_table = pa.Table.from_pydict(data2, schema=self.simple_pa_schema)
-        table_write.write_arrow(pa_table)
-        table_commit.commit(table_write.prepare_commit())
-        table_write.close()
-        table_commit.close()
-
-    def _write_partition_test_table(self, table, write_once=False):
-        write_builder = table.new_batch_write_builder()
-
-        table_write = write_builder.new_write()
-        table_commit = write_builder.new_commit()
-        data1 = {
-            'user_id': [1, 2, 3, 4],
-            'item_id': [1, 2, 3, 4],
-            'behavior': ['b-1', 'b-2', 'b-3', None],
-            'dt': ['p-1', 'p-1', 'p-1', 'p-1']
-        }
-        pa_table = pa.Table.from_pydict(data1, schema=self.partition_pk_pa_schema)
-        table_write.write_arrow(pa_table)
-        table_commit.commit(table_write.prepare_commit())
-        table_write.close()
-        table_commit.close()
-
-        if write_once:
-            return
-
         table_write = write_builder.new_write()
         table_commit = write_builder.new_commit()
         data1 = {
             'user_id': [5, 2, 7, 8],
-            'item_id': [5, 2, 7, 8],
-            'behavior': ['b-5', 'b-2-new', 'b-7', None],
-            'dt': ['p-2', 'p-1', 'p-1', 'p-2']
+            'item_id': [1005, 1002, 1007, 1008],
+            'behavior': ['e', 'b-new', 'g', 'h'],
+            'dt': ['p2', 'p1', 'p1', 'p2']
         }
-        pa_table = pa.Table.from_pydict(data1, schema=self.partition_pk_pa_schema)
+        pa_table = pa.Table.from_pydict(data1, schema=self.simple_pa_schema)
         table_write.write_arrow(pa_table)
         table_commit.commit(table_write.prepare_commit())
         table_write.close()

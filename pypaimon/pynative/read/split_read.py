@@ -65,7 +65,7 @@ class SplitRead(ABC):
     def create_reader(self) -> RecordReader:
         """Create a record reader for the given split."""
 
-    def file_reader_supplier(self, file_path: str):
+    def file_reader_supplier(self, file_path: str, for_merge_read: bool):
         _, extension = os.path.splitext(file_path)
         file_format = extension[1:]
 
@@ -81,7 +81,10 @@ class SplitRead(ABC):
 
         index_mapping = self.create_index_mapping()
         partition_info = self.create_partition_info()
-        return DataFileBatchReader(format_reader, index_mapping, partition_info)
+        if for_merge_read:
+            return DataFileBatchReader(format_reader, index_mapping, partition_info, self.trimmed_primary_key)
+        else:
+            return DataFileBatchReader(format_reader, index_mapping, partition_info, None)
 
     @abstractmethod
     def _get_all_data_fields(self):
@@ -236,7 +239,7 @@ class RawFileSplitRead(SplitRead):
     def create_reader(self) -> RecordReader:
         data_readers = []
         for file_path in self.split.file_paths:
-            supplier = partial(self.file_reader_supplier, file_path)
+            supplier = partial(self.file_reader_supplier, file_path=file_path, for_merge_read=False)
             data_readers.append(supplier)
 
         if not data_readers:
@@ -250,7 +253,7 @@ class RawFileSplitRead(SplitRead):
 
 class MergeFileSplitRead(SplitRead):
     def kv_reader_supplier(self, file_path):
-        reader_supplier = partial(self.file_reader_supplier, file_path)
+        reader_supplier = partial(self.file_reader_supplier, file_path=file_path, for_merge_read=True)
         return KeyValueWrapReader(reader_supplier(), len(self.trimmed_primary_key), self.value_arity)
 
     def section_reader_supplier(self, section: List[SortedRun]):
