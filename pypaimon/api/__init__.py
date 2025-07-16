@@ -42,6 +42,7 @@ __all__ = [
     'BatchWriteBuilder',
     'Table',
     'Schema',
+    'Database',
     'Catalog',
     'Predicate',
     'PredicateBuilder'

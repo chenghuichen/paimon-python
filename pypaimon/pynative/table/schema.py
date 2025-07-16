@@ -85,7 +85,7 @@ class TableSchema:
         except KeyError as e:
             raise RuntimeError(f"Missing required field in schema JSON: {e}") from e
         except Exception as e:
-            raise RuntimeError(f"Failed to parse schema from JSON") from e
+            raise RuntimeError(f"Failed to parse schema from JSON: {e}") from e
 
     @staticmethod
     def from_schema(schema: Schema):

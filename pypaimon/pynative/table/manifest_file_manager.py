@@ -30,8 +30,10 @@ from pypaimon.pynative.write.commit_message_impl import CommitMessageImpl
 class ManifestFileManager:
     """Writer for manifest files in Avro format using unified FileIO."""
 
-    def __init__(self, table: 'FileStoreTable'):
-        self.table = table
+    def __init__(self, table):
+        from pypaimon.pynative.table.file_store_table import FileStoreTable
+
+        self.table: FileStoreTable = table
         self.manifest_path = table.table_path / "manifest"
         self.file_io = table.file_io
         self.partition_key_fields = self.table.table_schema.get_partition_key_fields()

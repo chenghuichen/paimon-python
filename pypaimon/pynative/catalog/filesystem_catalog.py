@@ -18,6 +18,7 @@
 
 from typing import Optional
 
+from pypaimon.api import Schema
 from pypaimon.pynative.catalog.abstract_catalog import AbstractCatalog
 from pypaimon.pynative.catalog.catalog_constant import CatalogConstants
 from pypaimon.pynative.catalog.catalog_exception import TableNotExistException
@@ -39,11 +40,11 @@ class FileSystemCatalog(AbstractCatalog):
 
     def create_database_impl(self, name: str, properties: Optional[dict] = None):
         if properties and CatalogConstants.DB_LOCATION_PROP in properties:
-            raise ValueError(f"Cannot specify location for a database when using fileSystem catalog.")
+            raise ValueError("Cannot specify location for a database when using fileSystem catalog.")
         path = self.get_database_path(name)
         self.file_io.mkdirs(path)
 
-    def create_table_impl(self, table_identifier: TableIdentifier, schema: 'Schema'):
+    def create_table_impl(self, table_identifier: TableIdentifier, schema: Schema):
         table_path = self.get_table_path(table_identifier)
         schema_manager = SchemaManager(self.file_io, table_path)
         schema_manager.create_table(schema)

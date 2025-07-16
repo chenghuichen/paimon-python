@@ -18,7 +18,7 @@
 
 import pyarrow as pa
 import pyarrow.compute as pc
-from typing import Tuple, Dict, List
+from typing import Tuple, Dict
 
 from pypaimon.pynative.write.writer.data_writer import DataWriter
 

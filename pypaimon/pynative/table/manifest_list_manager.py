@@ -27,10 +27,12 @@ from pypaimon.pynative.table.snapshot import Snapshot
 class ManifestListManager:
     """Manager for manifest list files in Avro format using unified FileIO."""
 
-    def __init__(self, table: 'FileStoreTable'):
-        self.table = table
-        self.manifest_path = table.table_path / "manifest"
-        self.file_io = table.file_io
+    def __init__(self, table):
+        from pypaimon.pynative.table.file_store_table import FileStoreTable
+
+        self.table: FileStoreTable = table
+        self.manifest_path = self.table.table_path / "manifest"
+        self.file_io = self.table.file_io
 
     def read_all_manifest_files(self, snapshot: Snapshot) -> List[str]:
         manifest_files = []

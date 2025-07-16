@@ -30,8 +30,10 @@ from pypaimon.pynative.table.snapshot_manager import SnapshotManager
 class FileStoreCommit:
     """Core commit logic for file store operations."""
 
-    def __init__(self, table: 'FileStoreTable', commit_user: str):
-        self.table = table
+    def __init__(self, table, commit_user: str):
+        from pypaimon.pynative.table.file_store_table import FileStoreTable
+
+        self.table: FileStoreTable = table
         self.commit_user = commit_user
 
         self.snapshot_manager = SnapshotManager(table)

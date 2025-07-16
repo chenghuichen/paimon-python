@@ -47,8 +47,8 @@ class TableIdentifier:
                 self._system_table = splits[1]
         elif len(splits) == 3:
             if not splits[1].startswith(SYSTEM_BRANCH_PREFIX):
-                raise ValueError \
-                    (f"System table can only contain one '{SYSTEM_TABLE_SPLITTER}' separator, but this is: {self._object}")
+                raise ValueError(f"System table can only contain one '{SYSTEM_TABLE_SPLITTER}' separator, "
+                                 f"but this is: {self._object}")
             self._table = splits[0]
             self._branch = splits[1][len(SYSTEM_BRANCH_PREFIX):]
             self._system_table = splits[2]

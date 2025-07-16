@@ -27,7 +27,7 @@ from pypaimon.py4j.util.java_utils import serialize_java_object, deserialize_jav
 from pypaimon.api import \
     (catalog, table, read_builder, table_scan, split, row_type,
      table_read, write_builder, table_write, commit_message,
-     table_commit, Schema, predicate)
+     table_commit, Schema, predicate, Database, Table, Catalog)
 from typing import List, Iterator, Optional, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -42,16 +42,16 @@ class Catalog(catalog.Catalog):
         self._catalog_options = catalog_options
 
     @staticmethod
-    def create(catalog_options: dict) -> 'Catalog':
+    def create(catalog_options: dict) -> Catalog:
         j_catalog_context = java_utils.to_j_catalog_context(catalog_options)
         gateway = get_gateway()
         j_catalog = gateway.jvm.CatalogFactory.createCatalog(j_catalog_context)
         return Catalog(j_catalog, catalog_options)
 
-    def get_database(self, name: str) -> 'Database':
-        raise ValueError(f"No support method")
+    def get_database(self, name: str) -> Database:
+        raise ValueError("No support method")
 
-    def get_table(self, identifier: str) -> 'Table':
+    def get_table(self, identifier: str) -> Table:
         j_identifier = java_utils.to_j_identifier(identifier)
         j_table = self._j_catalog.getTable(j_identifier)
         return Table(j_table, self._catalog_options)
@@ -194,7 +194,7 @@ class TableRead(table_read.TableRead):
             j_table_read, j_read_type, TableRead._get_max_workers(catalog_options))
 
     def to_iterator(self, splits: List[Split]) -> Iterator[tuple]:
-        raise ValueError(f"No support method")
+        raise ValueError("No support method")
 
     def to_arrow(self, splits):
         record_batch_reader = self.to_arrow_batch_reader(splits)

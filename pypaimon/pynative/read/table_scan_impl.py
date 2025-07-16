@@ -159,7 +159,7 @@ class TableScanImpl(TableScan):
         elif predicate.method == 'or':
             all_partition_conditions = True
             for sub_predicate in predicate.literals:
-                if not sub_predicate.field in partition_keys:
+                if sub_predicate.field not in partition_keys:
                     all_partition_conditions = False
                     break
             if all_partition_conditions:
@@ -227,15 +227,15 @@ class TableScanImpl(TableScan):
             for sl in partition_sort_runs
         ]
 
-        # def weight_func(fl: List[DataFileMeta]) -> int:
-        #     return max(sum(f.file_size for f in fl), self.open_file_cost)
-        #
-        # packed_files: List[List[List[DataFileMeta]]] = _pack_for_ordered(sections, weight_func, self.target_split_size)
-        # flatten_packed_files: List[List[DataFileMeta]] = [
-        #     [file for sub_pack in pack for file in sub_pack]
-        #     for pack in packed_files
-        # ]
-        return self._build_split_from_pack(sections, file_entries, True)
+        def weight_func(fl: List[DataFileMeta]) -> int:
+            return max(sum(f.file_size for f in fl), self.open_file_cost)
+
+        packed_files: List[List[List[DataFileMeta]]] = _pack_for_ordered(sections, weight_func, self.target_split_size)
+        flatten_packed_files: List[List[DataFileMeta]] = [
+            [file for sub_pack in pack for file in sub_pack]
+            for pack in packed_files
+        ]
+        return self._build_split_from_pack(flatten_packed_files, file_entries, True)
 
     def _build_split_from_pack(self, packed_files, file_entries, for_primary_key_split: bool) -> List['SplitImpl']:
         splits = []

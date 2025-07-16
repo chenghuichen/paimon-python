@@ -16,7 +16,6 @@
 # limitations under the License.
 ################################################################################
 
-from pypaimon.pynative.row.internal_row import InternalRow
 from pypaimon.pynative.row.row_kind import RowKind
 from pypaimon.pynative.row.offset_row import OffsetRow
 

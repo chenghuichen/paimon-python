@@ -26,10 +26,12 @@ from pypaimon.pynative.table.snapshot import Snapshot
 class SnapshotManager:
     """Manager for snapshot files using unified FileIO."""
 
-    def __init__(self, table: 'FileStoreTable'):
-        self.table = table
-        self.file_io: FileIO = table.file_io
-        self.snapshot_dir = table.table_path / "snapshot"
+    def __init__(self, table):
+        from pypaimon.pynative.table.file_store_table import FileStoreTable
+
+        self.table: FileStoreTable = table
+        self.file_io: FileIO = self.table.file_io
+        self.snapshot_dir = self.table.table_path / "snapshot"
 
     def get_latest_snapshot(self) -> Optional[Snapshot]:
         latest_file = self.snapshot_dir / "LATEST"

@@ -226,7 +226,7 @@ class FileIO:
         try:
             if not self.delete(path, False) and self.exists(path):
                 self.logger.warning(f"Failed to delete file {path}")
-        except Exception as e:
+        except Exception:
             self.logger.warning(f"Exception occurs when deleting file {path}", exc_info=True)
 
     def delete_files_quietly(self, files: List[Path]):
@@ -240,7 +240,7 @@ class FileIO:
         try:
             if not self.delete(directory, True) and self.exists(directory):
                 self.logger.warning(f"Failed to delete directory {directory}")
-        except Exception as e:
+        except Exception:
             self.logger.warning(f"Exception occurs when deleting directory {directory}", exc_info=True)
 
     def get_file_size(self, path: Path) -> int:

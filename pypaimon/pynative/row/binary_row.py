@@ -169,7 +169,8 @@ class BinaryRowDeserializer:
             actual_string_offset = base_offset + sub_offset
             if actual_string_offset + length > len(bytes_data):
                 raise ValueError(
-                    f"String data out of bounds: actual_offset={actual_string_offset}, length={length}, total_length={len(bytes_data)}")
+                    f"String data out of bounds: actual_offset={actual_string_offset}, length={length}, "
+                    f"total_length={len(bytes_data)}")
             string_data = bytes_data[actual_string_offset:actual_string_offset + length]
             return string_data.decode('utf-8')
         else:

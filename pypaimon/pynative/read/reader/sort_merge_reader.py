@@ -183,13 +183,13 @@ class HeapEntry:
 def built_key_comparator(key_schema: List) -> Callable[[Any, Any], int]:
     def is_comparable_type(t):
         return (
-                pa.types.is_integer(t) or
-                pa.types.is_floating(t) or
-                pa.types.is_boolean(t) or
-                pa.types.is_string(t) or
-                pa.types.is_binary(t) or
-                pa.types.is_timestamp(t) or
-                pa.types.is_date(t)
+            pa.types.is_integer(t) or
+            pa.types.is_floating(t) or
+            pa.types.is_boolean(t) or
+            pa.types.is_string(t) or
+            pa.types.is_binary(t) or
+            pa.types.is_timestamp(t) or
+            pa.types.is_date(t)
         )
 
     # Precompute comparability flags to avoid repeated type checks
