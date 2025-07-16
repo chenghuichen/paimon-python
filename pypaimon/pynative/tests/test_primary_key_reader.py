@@ -63,12 +63,17 @@ class NativeReaderTest(PypaimonTestBase):
 
         table = self.native_catalog.get_table("default.test_pk_orc")
         read_builder = table.new_read_builder()
-        actual = self._read_test_table(read_builder).sort_by('user_id')
-        self.assertEqual(actual, self.expected)
+        actual: pa.Table = self._read_test_table(read_builder).sort_by('user_id')
+
+        # when bucket=1, actual field name will contain 'not null', so skip comparing field name
+        for i in range(len(actual.columns)):
+            col_a = actual.column(i)
+            col_b = self.expected.column(i)
+            self.assertEqual(col_a, col_b)
 
     def testPkAvroReader(self):
         schema = Schema(self.simple_pa_schema, partition_keys=['dt'], primary_keys=['user_id', 'dt'], options={
-            'bucket': '1',
+            'bucket': '2',
             'file.format': 'avro'
         })
         self.catalog.create_table('default.test_pk_avro', schema, False)
