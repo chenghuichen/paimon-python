@@ -35,7 +35,6 @@ class NativeFullTest(PypaimonTestBase):
         catalog = CatalogFactory.create({
             "warehouse": warehouse
         })
-
         simple_pa_schema = pa.schema([
             ('f0', pa.int32()),
             ('f1', pa.string()),
@@ -47,11 +46,11 @@ class NativeFullTest(PypaimonTestBase):
             'f2': ['X', 'Y', 'Z']
         }
         expect = pa.Table.from_pydict(data, schema=simple_pa_schema)
-
-        # write
         catalog.create_database("test_db", False)
         catalog.create_table("test_db.native_full", Schema(simple_pa_schema, options={}), False)
         table = catalog.get_table("test_db.native_full")
+
+        # write
         write_builder = table.new_batch_write_builder()
         table_write = write_builder.new_write()
         table_commit = write_builder.new_commit()

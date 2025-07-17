@@ -19,6 +19,7 @@
 from abc import abstractmethod
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
 from pypaimon.api import Schema, Table, Database
 from pypaimon.api import Catalog
@@ -37,7 +38,7 @@ class AbstractCatalog(Catalog):
     def __init__(self, catalog_options: dict):
         if CatalogOptions.WAREHOUSE not in catalog_options:
             raise ValueError(f"Paimon '{CatalogOptions.WAREHOUSE}' path must be set")
-        self.warehouse = Path(catalog_options.get(CatalogOptions.WAREHOUSE))
+        self.warehouse = catalog_options.get(CatalogOptions.WAREHOUSE)
         self.catalog_options = catalog_options
         self.file_io = FileIO(self.warehouse, self.catalog_options)
 
@@ -97,7 +98,14 @@ class AbstractCatalog(Catalog):
         return FileStoreTable(self.file_io, table_identifier, table_path, table_schema)
 
     def get_database_path(self, name) -> Path:
-        return self.warehouse / f"{name}{CatalogConstants.DB_SUFFIX}"
+        return self._trim_schema(self.warehouse) / f"{name}{CatalogConstants.DB_SUFFIX}"
 
     def get_table_path(self, table_identifier: TableIdentifier) -> Path:
         return self.get_database_path(table_identifier.get_database_name()) / table_identifier.get_table_name()
+
+    @staticmethod
+    def _trim_schema(warehouse_url: str) -> Path:
+        parsed = urlparse(warehouse_url)
+        bucket = parsed.netloc
+        warehouse_dir = parsed.path.lstrip('/')
+        return Path(f"{bucket}/{warehouse_dir}" if warehouse_dir else bucket)

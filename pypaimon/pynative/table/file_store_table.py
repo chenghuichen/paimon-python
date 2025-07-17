@@ -39,11 +39,11 @@ class FileStoreTable(Table):
         self.table_identifier = table_identifier
         self.table_path = table_path
 
-        self.fields = table_schema.fields or []
-        self.primary_keys = table_schema.primary_keys or []
-        self.partition_keys = table_schema.partition_keys or []
+        self.fields = table_schema.fields
+        self.primary_keys = table_schema.primary_keys
+        self.partition_keys = table_schema.partition_keys
 
-        self.options = table_schema.options or {}
+        self.options = table_schema.options
         self.table_schema = table_schema
         self.schema_manager = SchemaManager(file_io, table_path)
         self.is_primary_key_table = bool(self.primary_keys)

@@ -40,9 +40,9 @@ class TableSchema:
         self.id = id
         self.fields = fields
         self.highest_field_id = highest_field_id
-        self.partition_keys = partition_keys
-        self.primary_keys = primary_keys
-        self.options = options
+        self.partition_keys = partition_keys or []
+        self.primary_keys = primary_keys or []
+        self.options = options or {}
         self.comment = comment
         self.time_millis = time_millis if time_millis is not None else int(time.time() * 1000)
 

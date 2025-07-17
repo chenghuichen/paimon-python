@@ -19,7 +19,6 @@
 import os
 import logging
 import subprocess
-import tempfile
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from urllib.parse import urlparse, splitport
@@ -32,8 +31,8 @@ from pypaimon.pynative.common.exception import PyNativeNotImplementedError
 from pypaimon.pynative.common.core_option import CoreOptions
 
 S3_ENDPOINT = "s3.endpoint"
-S3_ACCESS_KEY_ID = "s3.access.key"
-S3_SECRET_ACCESS_KEY = "s3.secret.key"
+S3_ACCESS_KEY_ID = "s3.access-key"
+S3_SECRET_ACCESS_KEY = "s3.secret-key"
 S3_SESSION_TOKEN = "s3.session.token"
 S3_REGION = "s3.region"
 S3_PROXY_URI = "s3.proxy.uri"
@@ -48,10 +47,10 @@ AWS_ROLE_SESSION_NAME = "aws.role.session.name"
 
 
 class FileIO:
-    def __init__(self, warehouse: Path, catalog_options: dict):
+    def __init__(self, warehouse: str, catalog_options: dict):
         self.properties = catalog_options
         self.logger = logging.getLogger(__name__)
-        scheme, netloc, path = self.parse_location(str(warehouse))
+        scheme, netloc, path = self.parse_location(warehouse)
         if scheme in {"oss"}:
             self.filesystem = self._initialize_oss_fs()
         elif scheme in {"s3", "s3a", "s3n"}:
@@ -265,7 +264,7 @@ class FileIO:
             return input_stream.read().decode('utf-8')
 
     def try_to_write_atomic(self, path: Path, content: str) -> bool:
-        temp_path = Path(tempfile.mktemp())
+        temp_path = path.with_suffix(path.suffix + ".tmp") if path.suffix else Path(str(path) + ".tmp")
         success = False
         try:
             self.write_file(temp_path, content, False)
@@ -273,7 +272,7 @@ class FileIO:
         finally:
             if not success:
                 self.delete_quietly(temp_path)
-        return success
+            return success
 
     def write_file(self, path: Path, content: str, overwrite: bool = False):
         with self.new_output_stream(path) as output_stream:
