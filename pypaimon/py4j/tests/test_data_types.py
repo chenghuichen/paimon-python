@@ -20,7 +20,7 @@ import random
 import string
 import pyarrow as pa
 
-from pypaimon import Schema
+from pypaimon.api import Schema
 from pypaimon.py4j.tests import PypaimonTestBase
 from pypaimon.py4j.util import java_utils
 

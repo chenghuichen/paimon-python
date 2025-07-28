@@ -37,7 +37,6 @@ _lock = RLock()
 def get_gateway():
     # type: () -> JavaGateway
     global _gateway
-    global _lock
     with _lock:
         if _gateway is None:
             # Set the level to WARN to mute the noisy INFO level logs

@@ -19,23 +19,18 @@
 from dataclasses import dataclass
 from typing import Any, List, Optional
 
-from pypaimon.pynative.common.row.internal_row import InternalRow
+from pypaimon.api import Predicate
+from pypaimon.pynative.row.internal_row import InternalRow
 
 
 @dataclass
-class PyNativePredicate:
+class PredicateImpl(Predicate):
     method: str
-    index: int
-    field: str
+    index: Optional[int]
+    field: str | None
     literals: Optional[List[Any]] = None
 
     def test(self, record: InternalRow) -> bool:
-        """
-        # Test whether the record satisfies the predicate condition.
-        """
-        if not hasattr(record, 'get_field'):
-            raise ValueError("Record must have get_field method")
-
         if self.method == 'equal':
             return record.get_field(self.index) == self.literals[0]
         elif self.method == 'notEqual':

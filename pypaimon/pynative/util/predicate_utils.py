@@ -16,14 +16,12 @@
 # limitations under the License.
 ################################################################################
 
-from pypaimon.pynative.common.predicate import PyNativePredicate
-
 
 def filter_predicate_by_primary_keys(predicate, primary_keys):
     """
     Filter out predicates that are not related to primary key fields.
     """
-    from pypaimon import Predicate
+    from pypaimon.api import Predicate
 
     if predicate is None or primary_keys is None:
         return predicate
@@ -43,7 +41,7 @@ def filter_predicate_by_primary_keys(predicate, primary_keys):
         if len(filtered_literals) == 1:
             return filtered_literals[0]
 
-        return Predicate(PyNativePredicate(
+        return Predicate(Predicate(
             method=py_predicate.method,
             index=py_predicate.index,
             field=py_predicate.field,

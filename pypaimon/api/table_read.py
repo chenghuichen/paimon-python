@@ -21,7 +21,7 @@ import pyarrow as pa
 
 from abc import ABC, abstractmethod
 from pypaimon.api import Split
-from typing import List, Optional, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING, Iterator
 
 if TYPE_CHECKING:
     import ray
@@ -30,6 +30,10 @@ if TYPE_CHECKING:
 
 class TableRead(ABC):
     """To read data from data splits."""
+
+    @abstractmethod
+    def to_iterator(self, splits: List[Split]) -> Iterator[tuple]:
+        """Read data from splits and converted to pyarrow.Table format."""
 
     @abstractmethod
     def to_arrow(self, splits: List[Split]) -> pa.Table:

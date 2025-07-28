@@ -20,7 +20,7 @@ from .util import constants
 from .java_implementation import \
     (Catalog, Table, ReadBuilder, TableScan, Plan, RowType, Split,
      TableRead, BatchWriteBuilder, BatchTableWrite, CommitMessage,
-     BatchTableCommit, Predicate, PredicateBuilder)
+     BatchTableCommit, PredicateBuilder)
 
 __all__ = [
     'constants',
@@ -36,6 +36,5 @@ __all__ = [
     'BatchTableWrite',
     'CommitMessage',
     'BatchTableCommit',
-    'Predicate',
     'PredicateBuilder'
 ]

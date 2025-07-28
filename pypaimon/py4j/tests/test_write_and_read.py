@@ -20,7 +20,7 @@ import pandas as pd
 import pyarrow as pa
 from py4j.protocol import Py4JJavaError
 
-from pypaimon import Schema
+from pypaimon.api import Schema
 from pypaimon.py4j import Catalog
 from pypaimon.py4j.java_gateway import get_gateway
 from pypaimon.py4j.tests import PypaimonTestBase
